@@ -1,0 +1,370 @@
+:root {
+  --bg-a: #f4f0e8;
+  --bg-b: #e4f3ee;
+  --panel: rgba(255, 255, 255, 0.8);
+  --text: #23313a;
+  --muted: #52606b;
+  --accent: #116466;
+  --shadow: 0 18px 45px rgba(17, 100, 102, 0.12);
+  --green: #51b553;
+  --yellow: #e0b522;
+  --orange: #df7a20;
+  --red: #cf3742;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.8), transparent 45%),
+    radial-gradient(circle at 88% 0%, rgba(255, 255, 255, 0.7), transparent 32%),
+    linear-gradient(130deg, var(--bg-a), var(--bg-b));
+}
+
+.app-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 22px 14px 30px;
+  display: grid;
+  gap: 14px;
+}
+
+.hero {
+  padding: 18px;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  letter-spacing: 0.02em;
+}
+
+.hero p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid rgba(35, 49, 58, 0.09);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(3px);
+}
+
+.row {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+input[type="text"],
+input[type="date"],
+input[list],
+input[type="number"] {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(35, 49, 58, 0.2);
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 12px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.06);
+}
+
+.slider-row output {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--accent);
+}
+
+.meter-wrap {
+  margin-top: 8px;
+}
+
+.overall-meter {
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  transition: background-color 120ms linear;
+  background: #8a8a8a;
+}
+
+.party-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+.zone-help {
+  min-height: 1.2rem;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.zone-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.zone-chip {
+  background: rgba(17, 100, 102, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(17, 100, 102, 0.25);
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+}
+
+.zone-chip:hover {
+  background: rgba(17, 100, 102, 0.2);
+}
+
+.party-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.party-item {
+  display: grid;
+  gap: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(35, 49, 58, 0.12);
+  padding: 10px;
+  background: #fff;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.party-content {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.party-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(35, 49, 58, 0.1);
+}
+
+.party-main,
+.party-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.party-mode {
+  width: fit-content;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(35, 49, 58, 0.08);
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.76rem;
+}
+
+.party-zone,
+.party-time {
+  color: var(--muted);
+}
+
+.party-band {
+  justify-self: start;
+  width: fit-content;
+  font-family: "IBM Plex Mono", monospace;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+.party-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.edit-btn {
+  background: rgba(17, 100, 102, 0.12);
+  color: var(--accent);
+}
+
+.remove-btn {
+  align-self: center;
+  background: rgba(35, 49, 58, 0.1);
+  color: var(--text);
+}
+
+.party-item.editing {
+  border-color: rgba(17, 100, 102, 0.5);
+  box-shadow: 0 0 0 2px rgba(17, 100, 102, 0.15);
+}
+
+.party-custom-editor {
+  display: none;
+  border-top: 1px solid rgba(35, 49, 58, 0.1);
+  padding-top: 10px;
+}
+
+.party-item.customized .party-custom-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.custom-editor-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.mini-band-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mini-band-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.mini-band-row label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.mini-band-row input {
+  width: 74px;
+}
+
+.mini-band-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.party-mode-menu {
+  position: fixed;
+  z-index: 30;
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(35, 49, 58, 0.12);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 35px rgba(35, 49, 58, 0.18);
+}
+
+.party-mode-menu button {
+  text-align: left;
+  background: rgba(17, 100, 102, 0.08);
+  color: var(--text);
+}
+
+.party-mode-menu button:hover {
+  background: rgba(17, 100, 102, 0.16);
+}
+
+.config .hint {
+  margin-top: 0;
+  color: var(--muted);
+}
+
+.band-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.band-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.band-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.band-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.band-range input {
+  width: 72px;
+}
+
+@media (max-width: 720px) {
+  .party-form {
+    grid-template-columns: 1fr;
+  }
+
+  .party-item {
+    gap: 12px;
+  }
+
+  .party-content {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-band-row {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .band-row {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}

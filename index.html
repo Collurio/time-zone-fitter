@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Time Zone Fitter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <h1>Time Zone Fitter</h1>
+        <p>Find the least painful meeting time across time zones.</p>
+      </header>
+
+      <section class="panel controls" aria-label="Meeting controls">
+        <div class="row">
+          <label for="meeting-date">Meeting date (UTC)</label>
+          <input id="meeting-date" type="date" />
+        </div>
+
+        <div class="row slider-row">
+          <label for="time-slider">Meeting time (UTC)</label>
+          <input id="time-slider" type="range" min="0" max="1439" step="1" value="540" />
+          <output id="utc-output" for="time-slider">09:00</output>
+        </div>
+
+        <div class="meter-wrap" aria-live="polite">
+          <div id="overall-meter" class="overall-meter">
+            <span id="overall-label">Overall convenience: --</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel parties" aria-label="Party management">
+        <h2>Parties</h2>
+        <form id="party-form" class="party-form">
+          <input id="party-name" type="text" placeholder="Party name" required />
+          <input id="party-zone" list="timezone-list" placeholder="Time zone (e.g. Europe/Berlin)" required />
+          <button type="button" id="party-cancel" class="hidden">Cancel</button>
+          <datalist id="timezone-list"></datalist>
+          <button id="party-submit" type="submit">Add party</button>
+        </form>
+        <p id="zone-help" class="zone-help" aria-live="polite"></p>
+        <div id="zone-suggestions" class="zone-suggestions"></div>
+
+        <ul id="party-list" class="party-list"></ul>
+      </section>
+
+      <section class="panel config" aria-label="Convenience configuration">
+        <h2>Convenience Bands</h2>
+        <p class="hint">Edit start/end hours (0-24). Defaults match your request.</p>
+        <div id="band-editor" class="band-editor"></div>
+      </section>
+    </main>
+
+    <template id="party-item-template">
+      <li class="party-item">
+        <div class="party-content">
+          <div class="party-main">
+            <strong class="party-name"></strong>
+            <span class="party-zone"></span>
+          </div>
+          <div class="party-meta">
+            <span class="party-time"></span>
+            <span class="party-band"></span>
+            <span class="party-mode"></span>
+          </div>
+          <div class="party-actions">
+            <button class="edit-btn" type="button">Edit</button>
+            <button class="remove-btn" type="button">Remove</button>
+          </div>
+        </div>
+        <div class="party-custom-editor"></div>
+      </li>
+    </template>
+
+    <div id="party-mode-menu" class="party-mode-menu hidden" role="menu" aria-label="Party color range options">
+      <button type="button" data-mode="global">Use global ranges</button>
+      <button type="button" data-mode="custom">Use customized ranges</button>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
