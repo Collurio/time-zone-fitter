@@ -766,8 +766,7 @@ function onTimelineHandlePointerDown(event) {
     bandIndex,
     pointerId: event.pointerId,
     lastX: event.clientX,
-    fractionalSteps: 0,
-    lastStepDir: 0
+    fractionalSteps: 0
   };
 
   if (event.target instanceof Element && typeof event.target.setPointerCapture === "function") {
@@ -835,24 +834,33 @@ function getBandsByScope(scope, partyId) {
 }
 
 function stepDraggedHandles(bands, activeIndex, stepDir, drag) {
-  const current = normalizeBandBreakpoint(bands[activeIndex].start);
-  const directionReversed = drag.lastStepDir !== 0 && drag.lastStepDir !== stepDir;
+  const unwrapped = unwrapBandStarts(bands);
+  const moved = unwrapped[activeIndex] + stepDir;
+  const minBound = activeIndex === 0 ? unwrapped[unwrapped.length - 1] - 24 : unwrapped[activeIndex - 1];
+  const maxBound = activeIndex === unwrapped.length - 1 ? unwrapped[0] + 24 : unwrapped[activeIndex + 1];
+  unwrapped[activeIndex] = clamp(moved, minBound, maxBound);
+  applyUnwrappedStarts(bands, unwrapped);
+}
 
-  const overlapping = bands
-    .map((band, idx) => ({ idx, start: normalizeBandBreakpoint(band.start) }))
-    .filter((entry) => entry.idx !== activeIndex && entry.start === current)
-    .map((entry) => entry.idx);
+function unwrapBandStarts(bands) {
+  const values = [];
+  values[0] = normalizeBandBreakpoint(bands[0].start);
 
-  const moving = [activeIndex];
-  if (!directionReversed && overlapping.length > 0) {
-    moving.push(...overlapping);
+  for (let i = 1; i < bands.length; i += 1) {
+    let value = normalizeBandBreakpoint(bands[i].start);
+    while (value < values[i - 1]) {
+      value += 24;
+    }
+    values[i] = value;
   }
 
-  moving.forEach((idx) => {
-    bands[idx].start = mod24(normalizeBandBreakpoint(bands[idx].start) + stepDir);
-  });
+  return values;
+}
 
-  drag.lastStepDir = stepDir;
+function applyUnwrappedStarts(bands, unwrapped) {
+  for (let i = 0; i < bands.length; i += 1) {
+    bands[i].start = mod24(unwrapped[i]);
+  }
 }
 
 function getBandSegments(bands) {
