@@ -125,6 +125,10 @@ button:hover {
   display: none;
 }
 
+.party-mode-menu.hidden {
+  display: none;
+}
+
 .zone-help {
   min-height: 1.2rem;
   margin: 0 0 8px;
@@ -198,6 +202,7 @@ button:hover {
   color: var(--muted);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.76rem;
+  cursor: pointer;
 }
 
 .party-zone,
@@ -269,6 +274,12 @@ button:hover {
   align-items: center;
 }
 
+.range-preview {
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+}
+
 .mini-band-row label {
   display: grid;
   gap: 4px;
@@ -298,6 +309,96 @@ button:hover {
   border: 1px solid rgba(35, 49, 58, 0.12);
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 35px rgba(35, 49, 58, 0.18);
+}
+.custom-done-btn {
+  background: rgba(17, 100, 102, 0.14);
+  color: var(--accent);
+  padding: 5px 10px;
+}
+
+.band-timeline-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.band-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.legend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: rgba(35, 49, 58, 0.08);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.band-timeline {
+  position: relative;
+  height: 26px;
+  border-radius: 999px;
+  overflow: visible;
+  background: rgba(35, 49, 58, 0.08);
+  border: 1px solid rgba(35, 49, 58, 0.15);
+  touch-action: none;
+}
+
+.timeline-ticks {
+  position: relative;
+  height: 14px;
+  margin-top: -2px;
+}
+
+.timeline-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.timeline-segment {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.band-handle {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 30px;
+  border-radius: 8px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(35, 49, 58, 0.25);
+  cursor: ew-resize;
+  padding: 0;
+  z-index: 2;
+  touch-action: none;
+}
+
+.band-handle-mirror {
+  z-index: 3;
+}
+
+.band-handle:hover {
+  filter: brightness(1.05);
+}
+
+.band-handle:focus-visible {
+  outline: 2px solid #23313a;
+  outline-offset: 2px;
+}
+
+.timeline-hint {
+  color: var(--muted);
 }
 
 .party-mode-menu button {
@@ -338,7 +439,7 @@ button:hover {
 .band-range {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .band-range input {

@@ -14,7 +14,7 @@ A small touch/mouse-friendly GUI for finding a workable online meeting time acro
   - Yellow: 18:00-24:00
   - Red: 00:00-06:00
   - Orange: 06:00-08:00
-- Edit convenience bands from the UI (0-24 hour boundaries).
+- Edit convenience bands using breakpoints (start hours). Each band ends at the next breakpoint, including wrap-around past midnight.
 - Flexible timezone input with suggestions (e.g. country/common names such as "Sweden" -> CET / Europe/Stockholm).
 - Overall convenience meter for quick scanning.
 

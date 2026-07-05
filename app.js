@@ -1,8 +1,8 @@
 const bandDefaults = [
-  { id: "green", label: "Green", color: "#51b553", start: 8, end: 18, weight: 3 },
-  { id: "yellow", label: "Yellow", color: "#e0b522", start: 18, end: 24, weight: 2 },
-  { id: "red", label: "Red", color: "#cf3742", start: 0, end: 6, weight: 0 },
-  { id: "orange", label: "Orange", color: "#df7a20", start: 6, end: 8, weight: 1 }
+  { id: "red", label: "Red", color: "#cf3742", start: 0, weight: 0 },
+  { id: "orange", label: "Orange", color: "#df7a20", start: 6, weight: 1 },
+  { id: "green", label: "Green", color: "#51b553", start: 8, weight: 3 },
+  { id: "yellow", label: "Yellow", color: "#e0b522", start: 20, weight: 2 }
 ];
 
 const commonZones = [
@@ -20,6 +20,11 @@ const commonZones = [
   "Asia/Tokyo",
   "Australia/Sydney",
   "Pacific/Auckland"
+];
+
+const defaultParties = [
+  { name: "Leo", zoneHint: "Stockholm" },
+  { name: "Andrew", zoneHint: "New York" }
 ];
 
 const friendlyAliases = [
@@ -76,7 +81,8 @@ const state = {
   zoneLookup: new Map(),
   normalizedZoneLookup: new Map(),
   activeModeMenuPartyId: null,
-  longPressTimer: null
+  longPressTimer: null,
+  drag: null
 };
 
 const els = {
@@ -103,11 +109,30 @@ init();
 
 function init() {
   populateTimezoneList();
+  seedDefaultParties();
   const today = new Date();
   els.meetingDate.value = today.toISOString().slice(0, 10);
   renderBandEditor();
   wireEvents();
   render();
+}
+
+function seedDefaultParties() {
+  if (state.parties.length > 0) return;
+
+  defaultParties.forEach((entry) => {
+    const resolved = resolveTimeZoneInput(entry.zoneHint);
+    if (!resolved) return;
+    state.parties.push({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      name: entry.name,
+      timeZone: resolved.zone,
+      zoneDisplay: resolved.display,
+      bandMode: "global",
+      customBands: null,
+      customEditorOpen: false
+    });
+  });
 }
 
 function wireEvents() {
@@ -119,6 +144,10 @@ function wireEvents() {
     if (els.modeMenu.contains(event.target)) return;
     closePartyModeMenu();
   });
+
+  document.addEventListener("pointermove", handleTimelinePointerMove);
+  document.addEventListener("pointerup", stopTimelineDrag);
+  document.addEventListener("pointercancel", stopTimelineDrag);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePartyModeMenu();
@@ -174,6 +203,22 @@ function wireEvents() {
       }
       render();
     }
+
+    if (event.target.matches(".custom-done-btn")) {
+      const party = state.parties.find((entry) => entry.id === id);
+      if (!party) return;
+      party.customEditorOpen = false;
+      render();
+      return;
+    }
+
+    if (event.target.matches(".party-mode")) {
+      const party = state.parties.find((entry) => entry.id === id);
+      if (!party || party.bandMode !== "custom") return;
+      party.customEditorOpen = !party.customEditorOpen;
+      render();
+      return;
+    }
   });
 
   els.partyList.addEventListener("contextmenu", (event) => {
@@ -201,36 +246,8 @@ function wireEvents() {
   els.partyList.addEventListener("pointercancel", clearLongPressTimer);
   els.partyList.addEventListener("pointerleave", clearLongPressTimer);
 
-  els.bandEditor.addEventListener("input", (event) => {
-    if (!(event.target instanceof HTMLInputElement)) return;
-    const bandIndex = Number(event.target.dataset.bandIndex);
-    const bound = event.target.dataset.bound;
-    if (Number.isNaN(bandIndex) || !bound) return;
-
-    const value = clamp(Number(event.target.value), 0, 24);
-    event.target.value = String(value);
-    state.bands[bandIndex][bound] = value;
-    render();
-  });
-
-  els.partyList.addEventListener("input", (event) => {
-    if (!(event.target instanceof HTMLInputElement)) return;
-    const partyId = Number(event.target.dataset.partyId);
-    const bandIndex = Number(event.target.dataset.bandIndex);
-    const bound = event.target.dataset.bound;
-    if (Number.isNaN(partyId) || Number.isNaN(bandIndex) || !bound) return;
-
-    const party = state.parties.find((entry) => entry.id === partyId);
-    if (!party || party.bandMode !== "custom") return;
-    if (!Array.isArray(party.customBands)) {
-      party.customBands = structuredClone(state.bands);
-    }
-
-    const value = clamp(Number(event.target.value), 0, 24);
-    event.target.value = String(value);
-    party.customBands[bandIndex][bound] = value;
-    render();
-  });
+  els.bandEditor.addEventListener("pointerdown", onTimelineHandlePointerDown);
+  els.partyList.addEventListener("pointerdown", onTimelineHandlePointerDown);
 }
 
 function populateTimezoneList() {
@@ -281,7 +298,8 @@ function upsertParty() {
       timeZone: resolved.zone,
       zoneDisplay: resolved.display,
       bandMode: "global",
-      customBands: null
+      customBands: null,
+      customEditorOpen: false
     });
   }
 
@@ -429,8 +447,10 @@ function applyPartyBandMode(partyId, mode) {
     if (!Array.isArray(party.customBands)) {
       party.customBands = structuredClone(state.bands);
     }
+    party.customEditorOpen = true;
   } else {
     party.bandMode = "global";
+    party.customEditorOpen = false;
   }
 
   render();
@@ -447,35 +467,21 @@ function isValidTimeZone(timeZone) {
 
 function renderBandEditor() {
   els.bandEditor.innerHTML = "";
-  state.bands.forEach((band, idx) => {
-    const row = document.createElement("div");
-    row.className = "band-row";
+  const hint = document.createElement("small");
+  hint.className = "timeline-hint";
+  hint.textContent = "Drag breakpoints. Crossing another breakpoint carries it along; overlapping handles stay selectable.";
 
-    const name = document.createElement("div");
-    name.innerHTML = `<span class="band-swatch" style="background:${band.color}"></span>${band.label}`;
-
-    const range = document.createElement("div");
-    range.className = "band-range";
-    range.innerHTML = `
-      <label>Start
-        <input type="number" min="0" max="24" step="1" value="${band.start}" data-band-index="${idx}" data-bound="start" />
-      </label>
-      <span>to</span>
-      <label>End
-        <input type="number" min="0" max="24" step="1" value="${band.end}" data-band-index="${idx}" data-bound="end" />
-      </label>
-    `;
-
-    const hint = document.createElement("small");
-    hint.textContent = "24-hour clock";
-
-    row.append(name, range, hint);
-    els.bandEditor.appendChild(row);
+  const timeline = createBandTimeline({
+    bands: state.bands,
+    scope: "global"
   });
+
+  els.bandEditor.append(timeline, hint);
 }
 
 function render() {
   renderUtcLabel();
+  renderBandEditor();
   renderParties();
   renderOverallMeter();
 }
@@ -525,9 +531,13 @@ function renderParties() {
     time.textContent = `${localParts.dayLabel} ${toClock(minuteOfDay)} local`;
     bandNode.textContent = band.label;
     bandNode.style.background = band.color;
-    modeNode.textContent = party.bandMode === "custom" ? "custom ranges" : "global ranges";
-
     if (party.bandMode === "custom") {
+      modeNode.textContent = party.customEditorOpen ? "custom ranges (editing)" : "custom ranges (tap to edit)";
+    } else {
+      modeNode.textContent = "global ranges";
+    }
+
+    if (party.bandMode === "custom" && party.customEditorOpen) {
       item.classList.add("customized");
       renderCustomBandEditor(customEditor, party);
     }
@@ -613,63 +623,268 @@ function renderCustomBandEditor(container, party) {
 
   const header = document.createElement("div");
   header.className = "custom-editor-title";
-  header.innerHTML = `<span>Customized ranges</span><small>Right-click or long-press the row to switch back to global.</small>`;
+  const label = document.createElement("span");
+  label.textContent = "Customized ranges";
+  const doneButton = document.createElement("button");
+  doneButton.type = "button";
+  doneButton.className = "custom-done-btn";
+  doneButton.textContent = "Done";
+  header.append(label, doneButton);
 
-  const list = document.createElement("div");
-  list.className = "mini-band-list";
-
-  const bands = getBandsForParty(party);
-  bands.forEach((band, idx) => {
-    const row = document.createElement("div");
-    row.className = "mini-band-row";
-
-    const name = document.createElement("div");
-    name.className = "mini-band-label";
-    name.innerHTML = `<span class="band-swatch" style="background:${band.color}"></span>${band.label}`;
-
-    const start = document.createElement("label");
-    start.textContent = "Start";
-    const startInput = document.createElement("input");
-    startInput.type = "number";
-    startInput.min = "0";
-    startInput.max = "24";
-    startInput.step = "1";
-    startInput.value = String(band.start);
-    startInput.dataset.partyId = String(party.id);
-    startInput.dataset.bandIndex = String(idx);
-    startInput.dataset.bound = "start";
-    start.append(startInput);
-
-    const end = document.createElement("label");
-    end.textContent = "End";
-    const endInput = document.createElement("input");
-    endInput.type = "number";
-    endInput.min = "0";
-    endInput.max = "24";
-    endInput.step = "1";
-    endInput.value = String(band.end);
-    endInput.dataset.partyId = String(party.id);
-    endInput.dataset.bandIndex = String(idx);
-    endInput.dataset.bound = "end";
-    end.append(endInput);
-
-    row.append(name, start, end);
-    list.appendChild(row);
+  const timeline = createBandTimeline({
+    bands: getBandsForParty(party),
+    scope: "party",
+    partyId: party.id
   });
 
-  container.append(header, list);
+  const hint = document.createElement("small");
+  hint.className = "timeline-hint";
+  hint.textContent = "Tap or click the mode badge to reopen this editor.";
+
+  container.append(header, timeline, hint);
+}
+
+function createBandTimeline({ bands, scope, partyId = null }) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "band-timeline-wrap";
+
+  const legend = document.createElement("div");
+  legend.className = "band-legend";
+  const segments = getBandSegments(bands);
+  segments.forEach((segment) => {
+    const badge = document.createElement("span");
+    badge.className = "legend-badge";
+    badge.innerHTML = `<span class="band-swatch" style="background:${segment.color}"></span>${segment.label}: ${toClock(
+      Math.round(segment.start * 60)
+    )} - ${toClock(Math.round(segment.end * 60))}`;
+    legend.appendChild(badge);
+  });
+
+  const track = document.createElement("div");
+  track.className = "band-timeline";
+  track.dataset.scope = scope;
+  if (partyId != null) {
+    track.dataset.partyId = String(partyId);
+  }
+
+  const ticks = document.createElement("div");
+  ticks.className = "timeline-ticks";
+  [0, 6, 12, 18, 24].forEach((hour) => {
+    const tick = document.createElement("span");
+    tick.className = "timeline-tick";
+    tick.style.left = `${(hour / 24) * 100}%`;
+    tick.textContent = hour === 24 ? "24/0" : String(hour);
+    ticks.appendChild(tick);
+  });
+
+  segments.forEach((segment) => {
+    appendSegmentFill(track, segment.start, segment.end, segment.color);
+  });
+
+  const positionGroups = groupBandPositions(bands);
+  bands.forEach((band, idx) => {
+    const group = positionGroups.get(normalizeBandBreakpoint(band.start));
+    const groupIndex = group.findIndex((x) => x === idx);
+    const offset = (groupIndex - (group.length - 1) / 2) * 10;
+    const leftPct = (normalizeBandBreakpoint(band.start) / 24) * 100;
+    track.appendChild(createBandHandle({ scope, partyId, idx, band, leftPct, offset }));
+
+    if (normalizeBandBreakpoint(band.start) === 0) {
+      track.appendChild(createBandHandle({ scope, partyId, idx, band, leftPct: 100, offset, mirror: true }));
+    }
+  });
+
+  wrapper.append(legend, track, ticks);
+  return wrapper;
+}
+
+function createBandHandle({ scope, partyId, idx, band, leftPct, offset, mirror = false }) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = mirror ? "band-handle band-handle-mirror" : "band-handle";
+  button.dataset.scope = scope;
+  if (partyId != null) {
+    button.dataset.partyId = String(partyId);
+  }
+  button.dataset.bandIndex = String(idx);
+  button.title = `${band.label} starts at ${String(normalizeBandBreakpoint(band.start)).padStart(2, "0")}:00`;
+  button.style.background = band.color;
+  button.style.left = `${leftPct}%`;
+  button.style.transform = `translate(calc(-50% + ${offset}px), -50%)`;
+  return button;
+}
+
+function appendSegmentFill(track, start, end, color) {
+  if (start === end) return;
+
+  if (start < end) {
+    const part = document.createElement("span");
+    part.className = "timeline-segment";
+    part.style.left = `${(start / 24) * 100}%`;
+    part.style.width = `${((end - start) / 24) * 100}%`;
+    part.style.background = color;
+    track.appendChild(part);
+    return;
+  }
+
+  appendSegmentFill(track, start, 24, color);
+  appendSegmentFill(track, 0, end, color);
+}
+
+function groupBandPositions(bands) {
+  const groups = new Map();
+  bands.forEach((band, idx) => {
+    const key = normalizeBandBreakpoint(band.start);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(idx);
+  });
+  return groups;
 }
 
 function getBandForHourMinute(minuteOfDay, bands = state.bands) {
   const hour = minuteOfDay / 60;
-  for (const band of bands) {
-    if (inRange(hour, band.start, band.end)) return band;
+  const segments = getBandSegments(bands);
+  for (const segment of segments) {
+    if (inRange(hour, segment.start, segment.end)) return segment;
   }
   return { label: "Unassigned", color: "#777777", weight: 1 };
 }
 
+function onTimelineHandlePointerDown(event) {
+  if (!(event.target instanceof HTMLElement)) return;
+  if (!event.target.matches(".band-handle")) return;
+  event.preventDefault();
+
+  const bandIndex = Number(event.target.dataset.bandIndex);
+  const scope = event.target.dataset.scope;
+  const partyId = Number(event.target.dataset.partyId);
+  if (Number.isNaN(bandIndex) || !scope) return;
+
+  state.drag = {
+    scope,
+    partyId: Number.isNaN(partyId) ? null : partyId,
+    bandIndex,
+    pointerId: event.pointerId,
+    lastX: event.clientX,
+    fractionalSteps: 0,
+    lastStepDir: 0
+  };
+
+  if (event.target instanceof Element && typeof event.target.setPointerCapture === "function") {
+    try {
+      event.target.setPointerCapture(event.pointerId);
+    } catch {
+      // Ignore if pointer capture cannot be set.
+    }
+  }
+}
+
+function handleTimelinePointerMove(event) {
+  if (!state.drag) return;
+  if (event.pointerId !== state.drag.pointerId) return;
+
+  const drag = state.drag;
+  const timeline = resolveActiveTimelineElement(drag);
+  if (!timeline) return;
+
+  const bands = getBandsByScope(drag.scope, drag.partyId);
+  if (!bands) return;
+
+  const rect = timeline.getBoundingClientRect();
+  if (rect.width <= 0) return;
+
+  const deltaHours = ((event.clientX - drag.lastX) / rect.width) * 24;
+  drag.lastX = event.clientX;
+  drag.fractionalSteps += deltaHours;
+
+  let moved = false;
+  while (drag.fractionalSteps >= 0.5) {
+    stepDraggedHandles(bands, drag.bandIndex, 1, drag);
+    drag.fractionalSteps -= 1;
+    moved = true;
+  }
+
+  while (drag.fractionalSteps <= -0.5) {
+    stepDraggedHandles(bands, drag.bandIndex, -1, drag);
+    drag.fractionalSteps += 1;
+    moved = true;
+  }
+
+  if (moved) render();
+}
+
+function stopTimelineDrag(event) {
+  if (!state.drag) return;
+  if (event.pointerId !== state.drag.pointerId) return;
+  state.drag = null;
+}
+
+function resolveActiveTimelineElement(drag) {
+  if (drag.scope === "global") {
+    return els.bandEditor.querySelector(".band-timeline");
+  }
+
+  return els.partyList.querySelector(`.band-timeline[data-scope="party"][data-party-id="${drag.partyId}"]`);
+}
+
+function getBandsByScope(scope, partyId) {
+  if (scope === "global") return state.bands;
+  const party = state.parties.find((entry) => entry.id === partyId);
+  if (!party || !Array.isArray(party.customBands)) return null;
+  return party.customBands;
+}
+
+function stepDraggedHandles(bands, activeIndex, stepDir, drag) {
+  const current = normalizeBandBreakpoint(bands[activeIndex].start);
+  const directionReversed = drag.lastStepDir !== 0 && drag.lastStepDir !== stepDir;
+
+  const overlapping = bands
+    .map((band, idx) => ({ idx, start: normalizeBandBreakpoint(band.start) }))
+    .filter((entry) => entry.idx !== activeIndex && entry.start === current)
+    .map((entry) => entry.idx);
+
+  const moving = [activeIndex];
+  if (!directionReversed && overlapping.length > 0) {
+    moving.push(...overlapping);
+  }
+
+  moving.forEach((idx) => {
+    bands[idx].start = mod24(normalizeBandBreakpoint(bands[idx].start) + stepDir);
+  });
+
+  drag.lastStepDir = stepDir;
+}
+
+function getBandSegments(bands) {
+  const ordered = [...bands].sort((a, b) => a.start - b.start);
+  return ordered.map((band, idx) => {
+    const next = ordered[(idx + 1) % ordered.length];
+    return {
+      ...band,
+      end: next.start
+    };
+  });
+}
+
+function buildSegmentMap(bands) {
+  const map = new Map();
+  getBandSegments(bands).forEach((segment) => {
+    map.set(segment.id, segment);
+  });
+  return map;
+}
+
+function normalizeBandBreakpoint(value) {
+  const rounded = Math.round(clamp(value, 0, 24));
+  return rounded === 24 ? 0 : rounded;
+}
+
+function mod24(value) {
+  return ((value % 24) + 24) % 24;
+}
+
 function inRange(hour, start, end) {
-  if (start === end) return true;
+  if (start === end) return false;
   if (start < end) return hour >= start && hour < end;
   return hour >= start || hour < end;
 }
